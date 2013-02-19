@@ -6,8 +6,8 @@ Copyright:              Copyright (c) 2013, Kenny Zhuo Ming Lu
 Author:                 Kenny Zhuo Ming Lu
 Maintainer:             luzhuomi@gmail.com
 Stability:              Alpha
-Homepage:               
-Package-URL:            
+Homepage:               https://github.com/luzhuomi/system-gpio/
+Package-URL:            https://github.com/luzhuomi/system-gpio/
 Synopsis:               GPIO wrapper libary for Raspberry Pi
 Description:            
 Category:               System
@@ -17,7 +17,7 @@ Cabal-Version:          >= 1.2.3
 
 
 library 
-  Build-Depends:         base, ghc-prim, array
+  Build-Depends:         base >= 4.0 && < 5.0, ghc-prim, array
   Exposed-Modules:       System.Hardware.GPIO.Pin
   Buildable:             True
   Extensions:            GADTs
