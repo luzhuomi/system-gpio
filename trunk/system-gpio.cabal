@@ -1,0 +1,25 @@
+Name:                   system-gpio
+Version:                0.0.1
+License:                BSD3
+License-File:           LICENSE
+Copyright:              Copyright (c) 2013, Kenny Zhuo Ming Lu 
+Author:                 Kenny Zhuo Ming Lu
+Maintainer:             luzhuomi@gmail.com
+Stability:              Alpha
+Homepage:               
+Package-URL:            
+Synopsis:               GPIO wrapper libary for Raspberry Pi
+Description:            
+Category:               System
+Tested-With:            GHC
+Build-Type:             Simple
+Cabal-Version:          >= 1.2.3
+
+
+library 
+  Build-Depends:         base, ghc-prim, array
+  Exposed-Modules:       System.Hardware.GPIO.Pin
+  Buildable:             True
+  Extensions:            GADTs
+  GHC-Options:            
+  GHC-Prof-Options:      -auto-all
