@@ -12,7 +12,7 @@ Adding STM support
 example
 =======
 
-```
+```haskell
 module Main where
 
 import System.Hardware.GPIO.Pin as P
