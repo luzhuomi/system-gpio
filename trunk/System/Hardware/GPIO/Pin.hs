@@ -2,23 +2,22 @@ module System.Hardware.GPIO.Pin
        where
 
 import Data.Array
+import System.IO
 
-data Pin where 
-  InPin :: Int -> Pin
-  OutPin :: Int -> Pin
-  PwmPin :: Int -> Pin
- deriving (Show, Eq)
+data Pin = Pin { num :: Int
+               , handle :: Handle 
+               , dir :: PinMode
+               } 
+         deriving (Show, Eq)
 
-num :: Pin -> Int
-num (InPin n) = n
-num (OutPin n) = n
-num (PwmPin n) = n
+data PinMode = In | Out | Pwm deriving Eq
 
-dir :: Pin -> String
-dir (InPin _) = "in"
-dir (OutPin _) = "out"
-dir (PwmPin _) = "pwm"
+instance Show PinMode where
+  show In = "in"
+  show Out = "out"
+  show Pwm = "pwm"
 
+-- mapping raspberry pi pin number to internal bmc2xxx pin number
 pinMapping :: Array Int Int
 pinMapping = listArray (0,16) [17, 18, 21, 22, 23, 24, 25, 4, 0, 1, 8, 7, 10, 9, 11, 14, 15]
 
@@ -30,45 +29,67 @@ global_DEVICE_PATH i = global_GPIO_PATH ++ "/gpio"++ (show i)
 global_DIRECTION_PATH i = global_DEVICE_PATH i ++ "/direction"
 global_VALUE_PATH i = global_DEVICE_PATH i ++ "/value"
 
-init :: Pin -> IO ()
-init pin = do 
-  { let pn = pinMapping ! (num pin)
-  ; writeFile global_EXPORT_PATH (show pn)
-  ; writeFile (global_DIRECTION_PATH pn) (dir pin)
-  ; case pin of 
-       { OutPin _ -> set pin Zero
-       ; _        -> return () 
+
+openWriteClose :: FilePath -> String -> IO ()
+openWriteClose fp str = do 
+  { hdl <- openFile fp WriteMode
+  ; hPutStr hdl str 
+  ; hFlush hdl
+  ; hClose hdl
+  }
+
+-- ^ init pin_number direction
+init :: Int -> PinMode -> IO Pin
+init i d = do 
+  { let pn = pinMapping ! i
+  ; openWriteClose global_EXPORT_PATH (show pn)
+  ; openWriteClose (global_DIRECTION_PATH pn) (show d)
+  ; hdl <- case d of 
+           { In -> openFile (global_VALUE_PATH pn) ReadMode
+           ; _  -> openFile (global_VALUE_PATH pn) ReadWriteMode
+           }
+  ; let pin = Pin i hdl d    
+  ; case d of 
+       { Out -> set pin Zero
+       ; _   -> return () 
        }
+  ; return pin
   }
            
 close :: Pin -> IO ()
 close pin = do
   { let pn = pinMapping ! (num pin)
-  ; writeFile global_UNEXPORT_PATH (show pn)
-  ; case pin of 
-       { OutPin _ -> set pin Zero
-       ; _        -> return () 
+  ; case (dir pin) of 
+       { Out -> set pin Zero
+       ; _   -> return () 
        }
+  ; let hdl = handle pin
+  ; hFlush hdl
+  ; hClose hdl
+  ; openWriteClose global_UNEXPORT_PATH (show pn)
   }
 
 data Value = One | Zero deriving (Show, Eq)
 
 read :: Pin -> IO Value
 read pin = do 
-  { let pn = pinMapping ! (num pin)
-  ; s <- readFile (global_VALUE_PATH pn)
-  ; if (s == "1") 
+  { let hdl = handle pin
+  ; hSeek hdl AbsoluteSeek 0
+  ; c <- hGetChar hdl
+  ; if (c == '1') 
     then return One
     else return Zero
   }
 
   
 set :: Pin -> Value -> IO ()
-set pin@(OutPin n) value = do 
-  { let pn = pinMapping ! n
+set (Pin _ hdl Out) value = do 
+  { hSeek hdl AbsoluteSeek 0
   ; case value of 
-       { One -> writeFile (global_VALUE_PATH pn) "1"
-       ; Zero -> writeFile (global_VALUE_PATH pn) "0"
+       { One -> hPutChar hdl '1'
+       ; Zero -> hPutChar hdl '0'
        }
+  ; hFlush hdl
   }
+set (Pin _ _ _) value = return ()  
 
